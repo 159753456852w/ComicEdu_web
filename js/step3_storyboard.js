@@ -149,7 +149,7 @@ function renderMultiPageMode() {
                 ${isSelected ? '<span class="text-xs bg-[#4343d5] text-white px-2 py-1 rounded-full font-bold">已選擇</span>' : '<span class="text-xs bg-[#4343d5]/10 text-[#4343d5] px-2 py-1 rounded-full font-bold">AI 推薦</span>'}
             </div>
             <div class="aspect-[4/3] bg-slate-50 rounded-lg overflow-hidden border border-slate-200 mb-3">
-                <img src="${apiAssetUrl(`/api/v1/layouts/images/${encodeURIComponent(layout.layout_name)}`)}"
+                <img ${apiImageAttributes(`/api/v1/layouts/images/${encodeURIComponent(layout.layout_name)}`)}
                      alt="${layout.layout_name}" class="w-full h-full object-contain" loading="lazy" />
             </div>
             <div class="bg-slate-50 rounded-lg p-3">
@@ -229,7 +229,7 @@ function renderLayoutCards(layouts, pageIdx) {
                 <span class="text-xs bg-[#4343d5]/10 text-[#4343d5] px-2 py-1 rounded-full font-bold">AI 推薦</span>
             </div>
             <div class="aspect-[4/3] bg-slate-50 rounded-lg overflow-hidden border border-slate-200 mb-3">
-                <img src="${apiAssetUrl(`/api/v1/layouts/images/${encodeURIComponent(layout.layout_name)}`)}"
+                <img ${apiImageAttributes(`/api/v1/layouts/images/${encodeURIComponent(layout.layout_name)}`)}
                      alt="${layout.layout_name}" class="w-full h-full object-contain" loading="lazy" />
             </div>
             <div class="bg-slate-50 rounded-lg p-3">

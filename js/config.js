@@ -27,11 +27,20 @@ function apiAssetUrl(value) {
 const API_IMAGE_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 
 async function fetchApiAsset(value) {
-    const response = await apiFetch(apiAssetUrl(value), { cache: 'no-store' });
-    if (!response.ok) throw new Error(`圖片載入失敗（HTTP ${response.status}）`);
-    const blob = await response.blob();
-    if (!blob.type.startsWith('image/')) throw new Error(`圖片格式錯誤（${blob.type || 'unknown'}）`);
-    return blob;
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+            const response = await apiFetch(apiAssetUrl(value), { cache: 'no-store' });
+            if (!response.ok) throw new Error(`圖片載入失敗（HTTP ${response.status}）`);
+            const blob = await response.blob();
+            if (!blob.type.startsWith('image/')) throw new Error(`圖片格式錯誤（${blob.type || 'unknown'}）`);
+            return blob;
+        } catch (error) {
+            lastError = error;
+            if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 300 * (attempt + 1)));
+        }
+    }
+    throw lastError;
 }
 
 async function setApiImageSource(image, value) {

@@ -26,7 +26,7 @@ function apiAssetUrl(value) {
 
 const API_IMAGE_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 
-async function fetchApiAsset(value) {
+async function fetchApiAssetNow(value) {
     let lastError;
     for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
@@ -41,6 +41,14 @@ async function fetchApiAsset(value) {
         }
     }
     throw lastError;
+}
+
+let apiAssetQueue = Promise.resolve();
+
+function fetchApiAsset(value) {
+    const task = apiAssetQueue.then(() => fetchApiAssetNow(value));
+    apiAssetQueue = task.catch(() => undefined);
+    return task;
 }
 
 async function setApiImageSource(image, value) {

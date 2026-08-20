@@ -67,7 +67,7 @@ function renderExportPage(container) {
                 <span class="text-sm font-bold text-slate-700">第 ${currentExportPage + 1} / ${exportPages.length} 頁</span>
                 <button type="button" onclick="switchExportPage(1)" class="px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-semibold disabled:opacity-30" ${currentExportPage === exportPages.length - 1 ? 'disabled' : ''}>下一頁</button>
             </div>
-            <img src="${API_BASE}/projects/${currentProjectId}/export/image?page=${currentExportPage}&t=${Date.now()}" alt="第 ${currentExportPage + 1} 頁最終成果" class="max-w-full h-auto comic-shadow border border-slate-300">
+            <img ${apiImageAttributes(`${API_BASE}/projects/${currentProjectId}/export/image?page=${currentExportPage}&t=${Date.now()}`)} alt="第 ${currentExportPage + 1} 頁最終成果" class="max-w-full h-auto comic-shadow border border-slate-300">
         </div>`;
 }
 
@@ -79,14 +79,23 @@ function switchExportPage(delta) {
     if (container) renderExportPage(container);
 }
 
-function downloadProject(format) {
+async function downloadProject(format) {
     if (!currentProjectId || exportPages.length === 0) return;
-    const link = document.createElement('a');
-    link.href = `${API_BASE}/projects/${currentProjectId}/export?format=${encodeURIComponent(format)}`;
-    link.download = '';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    try {
+        const response = await apiFetch(`${API_BASE}/projects/${currentProjectId}/export?format=${encodeURIComponent(format)}`);
+        if (!response.ok) throw new Error(`下載失敗（HTTP ${response.status}）`);
+        const blobUrl = URL.createObjectURL(await response.blob());
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch (error) {
+        console.error(error);
+        alert(error.message);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -62,7 +62,7 @@ function renderProjectCollection(projects, gridId, countId, completed) {
     }
     grid.innerHTML = projects.map(project => `
         <a href="${projectRoute(project)}" class="group rounded-2xl bg-white border border-slate-200 overflow-hidden hover:border-indigo-300 hover:shadow-lg transition-all">
-            ${project.coverUrl ? `<img src="${apiAssetUrl(project.coverUrl)}&t=${Date.now()}" alt="${escapeHtml(project.title)}封面" class="w-full h-40 object-cover object-top bg-white">` : `<div class="h-28 bg-slate-100 flex items-center justify-center"><span class="material-symbols-outlined text-4xl text-slate-300">auto_stories</span></div>`}
+            ${project.coverUrl ? `<img ${apiImageAttributes(`${project.coverUrl}${project.coverUrl.includes('?') ? '&' : '?'}t=${Date.now()}`)} alt="${escapeHtml(project.title)}封面" class="w-full h-40 object-cover object-top bg-white">` : `<div class="h-28 bg-slate-100 flex items-center justify-center"><span class="material-symbols-outlined text-4xl text-slate-300">auto_stories</span></div>`}
             <div class="p-4">
                 <div class="flex items-start justify-between gap-3"><h3 class="font-bold text-slate-900 leading-snug">${escapeHtml(project.title)}</h3><span class="text-[10px] whitespace-nowrap text-indigo-600 font-bold">${completed ? '已完成' : `步驟 ${project.completedStep}/5`}</span></div>
                 <p class="text-xs text-slate-500 mt-2">${escapeHtml(project.subject || '未分類')} · ${escapeHtml(project.gradeLevel || '未設定年級')} · ${project.pageCount} 頁</p>

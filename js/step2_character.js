@@ -45,7 +45,7 @@ function generateCharacterCard(character, isRecommended = false, isSelected = fa
         <div class="bg-surface-container-lowest rounded-xl p-5 ${cardClass} relative group cursor-pointer hover:shadow-xl transition-all duration-300" data-char-id="${character.id}">
             ${starBadge}
             <div class="h-48 rounded-lg bg-surface-container mb-4 overflow-hidden flex items-center justify-center">
-                ${character.image_url ? `<img alt="${character.name_zh}" class="w-full h-full object-contain group-hover:scale-105 transition-transform" src="${apiAssetUrl(character.image_url)}" />` : '<div class="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400"><span class="material-symbols-outlined text-4xl">image_not_supported</span></div>'}
+                ${character.image_url ? `<img alt="${character.name_zh}" class="w-full h-full object-contain group-hover:scale-105 transition-transform" ${apiImageAttributes(character.image_url)} />` : '<div class="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400"><span class="material-symbols-outlined text-4xl">image_not_supported</span></div>'}
             </div>
             <h3 class="font-bold text-lg mb-1">${character.name_zh}</h3>
             <p class="text-xs text-on-surface-variant mb-2">${character.description || ''}</p>

@@ -13,6 +13,7 @@ const API_BASE = `${API_ORIGIN}/api/v1`;
 
 async function apiFetch(input, init = {}) {
     const headers = new Headers(init.headers || {});
+    // ngrok's free-domain interstitial checks this exact lower-case header.
     headers.set('ngrok-skip-browser-warning', 'true');
     return fetch(input, { ...init, headers, credentials: 'include' });
 }
@@ -22,6 +23,108 @@ function apiAssetUrl(value) {
     if (/^https?:\/\//i.test(value)) return value;
     return `${API_ORIGIN}${value.startsWith('/') ? value : `/${value}`}`;
 }
+
+const API_IMAGE_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+
+async function fetchApiAsset(value) {
+    const response = await apiFetch(apiAssetUrl(value), { cache: 'no-store' });
+    if (!response.ok) throw new Error(`圖片載入失敗（HTTP ${response.status}）`);
+    const blob = await response.blob();
+    if (!blob.type.startsWith('image/')) throw new Error(`圖片格式錯誤（${blob.type || 'unknown'}）`);
+    return blob;
+}
+
+async function setApiImageSource(image, value) {
+    if (!image || !value) return;
+    const url = apiAssetUrl(value);
+    const requestToken = `${Date.now()}-${Math.random()}`;
+    image.dataset.apiImageToken = requestToken;
+    image.dataset.apiSrc = url;
+    try {
+        const blob = await fetchApiAsset(url);
+        if (image.dataset.apiImageToken !== requestToken) return;
+        const objectUrl = URL.createObjectURL(blob);
+        image.addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
+        image.src = objectUrl;
+        image.dataset.apiImageReady = 'true';
+    } catch (error) {
+        if (image.dataset.apiImageToken !== requestToken) return;
+        image.dataset.apiImageError = error.message;
+        image.dispatchEvent(new Event('error'));
+        console.error('API 圖片載入失敗', url, error);
+    }
+}
+
+function apiImageAttributes(value) {
+    const url = apiAssetUrl(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    return `src="${API_IMAGE_PLACEHOLDER}" data-api-src="${url}"`;
+}
+
+function apiMaskAttributes(value) {
+    const url = apiAssetUrl(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    return `data-api-mask="${url}"`;
+}
+
+async function setApiMaskSource(element, value) {
+    if (!element || !value) return;
+    const url = apiAssetUrl(value);
+    const requestToken = `${Date.now()}-${Math.random()}`;
+    element.dataset.apiMaskToken = requestToken;
+    try {
+        const objectUrl = URL.createObjectURL(await fetchApiAsset(url));
+        if (element.dataset.apiMaskToken !== requestToken) {
+            URL.revokeObjectURL(objectUrl);
+            return;
+        }
+        const previousUrl = element.dataset.apiMaskObjectUrl;
+        element.style.webkitMaskImage = `url("${objectUrl}")`;
+        element.style.maskImage = `url("${objectUrl}")`;
+        element.dataset.apiMaskObjectUrl = objectUrl;
+        if (previousUrl) URL.revokeObjectURL(previousUrl);
+    } catch (error) {
+        element.dataset.apiMaskError = error.message;
+        console.error('API 遮罩載入失敗', url, error);
+    }
+}
+
+function hydrateApiImages(root = document) {
+    const images = [];
+    if (root instanceof HTMLImageElement && root.matches('img[data-api-src]')) images.push(root);
+    if (root.querySelectorAll) images.push(...root.querySelectorAll('img[data-api-src]'));
+    images.forEach(image => {
+        const url = image.dataset.apiSrc;
+        if (url && image.dataset.apiHydratedUrl !== url) {
+            image.dataset.apiHydratedUrl = url;
+            setApiImageSource(image, url);
+        }
+    });
+}
+
+function hydrateApiMasks(root = document) {
+    const elements = [];
+    if (root instanceof Element && root.matches('[data-api-mask]')) elements.push(root);
+    if (root.querySelectorAll) elements.push(...root.querySelectorAll('[data-api-mask]'));
+    elements.forEach(element => {
+        const url = element.dataset.apiMask;
+        if (url && element.dataset.apiMaskHydratedUrl !== url) {
+            element.dataset.apiMaskHydratedUrl = url;
+            setApiMaskSource(element, url);
+        }
+    });
+}
+
+function hydrateApiAssets(root = document) {
+    hydrateApiImages(root);
+    hydrateApiMasks(root);
+}
+
+const apiImageObserver = new MutationObserver(mutations => {
+    mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE) hydrateApiAssets(node);
+    }));
+});
+apiImageObserver.observe(document.documentElement, { childList: true, subtree: true });
+document.addEventListener('DOMContentLoaded', () => hydrateApiAssets());
 
 (() => {
     const projectId = new URLSearchParams(window.location.search).get('projectId');
@@ -93,7 +196,7 @@ function apiAssetUrl(value) {
             });
         });
         try {
-            const response = await fetch(`${API_BASE}/projects/${projectId}?t=${Date.now()}`, { cache: 'no-store' });
+            const response = await apiFetch(`${API_BASE}/projects/${projectId}?t=${Date.now()}`, { cache: 'no-store' });
             const payload = await response.json();
             const completedStep = Number(payload?.data?.completedStep || 1);
             document.querySelectorAll('a[href]').forEach(link => {

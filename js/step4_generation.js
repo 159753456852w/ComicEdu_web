@@ -270,10 +270,9 @@ function renderGenerationPreview(data) {
             const centerLeft = ((Number.isFinite(pos.cx) ? pos.cx : pos.x + pos.w / 2) / cw * 100).toFixed(2);
             const centerTop = ((Number.isFinite(pos.cy) ? pos.cy : pos.y + pos.h / 2) / ch * 100).toFixed(2);
             const maskUrl = `${API_BASE}/projects/${currentProjectId}/masks/${i}?page=${currentViewPage}&t=${Date.now()}`;
-            const maskStyle = `-webkit-mask-image:url('${maskUrl}');mask-image:url('${maskUrl}');`;
             let extraContent = '';
             if (status === 'generating') extraContent = `<div class="scan-bar-masked"></div>`;
-            overlaysHtml += `<div class="panel-mask-overlay panel-${status}" style="left:${left}%;top:${top}%;width:${width}%;height:${height}%;${maskStyle}">${extraContent}</div>`;
+            overlaysHtml += `<div class="panel-mask-overlay panel-${status}" ${apiMaskAttributes(maskUrl)} style="left:${left}%;top:${top}%;width:${width}%;height:${height}%">${extraContent}</div>`;
             if (status === 'generating') {
                 overlaysHtml += `<div class="panel-label" style="left:${centerLeft}%;top:${centerTop}%;transform:translate(-50%,-50%);">
                     <div style="width:28px;height:28px;border:3px solid rgba(99,102,241,0.3);border-top-color:#6366f1;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:6px;"></div>
@@ -290,7 +289,7 @@ function renderGenerationPreview(data) {
     const previewVersion = data.previewVersion || Date.now();
     const previewImgSrc = previewAvailable ? `${API_BASE}/projects/${currentProjectId}/preview?page=${currentViewPage}&v=${previewVersion}` : '';
     const previewImgHtml = previewImgSrc
-        ? `<img id="gen-preview-img" src="${previewImgSrc}" alt="漫畫預覽" style="position:absolute;inset:0;width:100%;height:100%;border-radius:8px;" onload="revealGenerationOverlays(this)" onerror="this.style.opacity='0.3';revealGenerationOverlays(this)">`
+        ? `<img id="gen-preview-img" ${apiImageAttributes(previewImgSrc)} alt="漫畫預覽" style="position:absolute;inset:0;width:100%;height:100%;border-radius:8px;" onload="revealGenerationOverlays(this)" onerror="this.style.opacity='0.3';revealGenerationOverlays(this)">`
         : '';
 
     // 檢查 canvas 尺寸是否改變（換頁時版面不同），若不同則強制全量重繪
@@ -307,7 +306,7 @@ function renderGenerationPreview(data) {
         const progressSpan = section.querySelector('.progress-text');
         if (progressSpan) progressSpan.textContent = progressText;
         const img = section.querySelector('#gen-preview-img');
-        if (img) { if (previewImgSrc) img.src = previewImgSrc; }
+        if (img) { if (previewImgSrc) setApiImageSource(img, previewImgSrc); }
         else if (previewImgSrc) { const container = section.querySelector('.canvas-container'); if (container) container.insertAdjacentHTML('afterbegin', previewImgHtml); }
         const overlaysContainer = section.querySelector('.overlays-container');
         if (overlaysContainer && section.dataset.overlaySignature !== overlaySignature) {
@@ -413,7 +412,7 @@ function preloadPanelMasks(totalPanels) {
             c.getContext('2d').drawImage(img, 0, 0);
             panelMaskCanvases[idx] = c;
         };
-        img.src = `${API_BASE}/projects/${currentProjectId}/masks/${i}?page=${currentViewPage}`;
+        setApiImageSource(img, `${API_BASE}/projects/${currentProjectId}/masks/${i}?page=${currentViewPage}`);
         panelMaskCanvases.push(null);
     }
 }
@@ -553,13 +552,13 @@ function showPanelRegenOverlay(panelId) {
     const left = (pos.x / cw * 100).toFixed(2), top = (pos.y / ch * 100).toFixed(2);
     const width = (pos.w / cw * 100).toFixed(2), height = (pos.h / ch * 100).toFixed(2);
     const maskUrl = `${API_BASE}/projects/${currentProjectId}/masks/${panelId}?page=${currentViewPage}`;
-    const maskStyle = `-webkit-mask-image:url('${maskUrl}');mask-image:url('${maskUrl}');`;
     const overlayContainer = document.querySelector('#final-preview-section [style*="position:absolute;inset:0"]');
     if (!overlayContainer) return;
     const overlay = document.createElement('div');
     overlay.id = `regen-overlay-${panelId}`;
     overlay.className = 'panel-mask-overlay panel-generating';
-    overlay.style.cssText = `left:${left}%;top:${top}%;width:${width}%;height:${height}%;${maskStyle}pointer-events:none;z-index:10;`;
+    overlay.style.cssText = `left:${left}%;top:${top}%;width:${width}%;height:${height}%;pointer-events:none;z-index:10;`;
+    overlay.dataset.apiMask = maskUrl;
     overlay.innerHTML = `<div class="scan-bar-masked"></div>`;
     overlayContainer.appendChild(overlay);
     const label = document.createElement('div');
@@ -588,7 +587,7 @@ async function pollSinglePanelRegen(panelId) {
                 panelData = data;
                 removePanelRegenOverlay(panelId);
                 const img = document.querySelector('#final-preview-section img[alt="最終成果"]');
-                if (img) img.src = `${API_BASE}/projects/${currentProjectId}/export/image?page=${currentViewPage}&t=${Date.now()}`;
+                if (img) setApiImageSource(img, `${API_BASE}/projects/${currentProjectId}/export/image?page=${currentViewPage}&t=${Date.now()}`);
                 showStatus('success', `分鏡 ${panelId + 1} 已重新生成完成！`);
                 return;
             } else if (data.status === 'failed') {
@@ -864,7 +863,7 @@ async function renderFinalImage() {
         const left = (pos.x / cw * 100).toFixed(2), top = (pos.y / ch * 100).toFixed(2);
         const width = (pos.w / cw * 100).toFixed(2), height = (pos.h / ch * 100).toFixed(2);
         const maskUrl = `${API_BASE}/projects/${currentProjectId}/masks/${i}?page=${currentViewPage}`;
-        panelOverlaysHtml += `<div class="panel-clickable" data-panel-id="${panelId}" style="left:${left}%;top:${top}%;width:${width}%;height:${height}%;-webkit-mask-image:url('${maskUrl}');mask-image:url('${maskUrl}');"></div>`;
+        panelOverlaysHtml += `<div class="panel-clickable" data-panel-id="${panelId}" ${apiMaskAttributes(maskUrl)} style="left:${left}%;top:${top}%;width:${width}%;height:${height}%;"></div>`;
     });
 
     preloadPanelMasks(positions.length);
@@ -881,7 +880,7 @@ async function renderFinalImage() {
         </div>
         <div class="w-full bg-slate-200 rounded-lg overflow-hidden flex justify-center p-4 min-h-[400px]">
             <div style="position:relative;max-width:100%;width:fit-content;">
-                <img src="${API_BASE}/projects/${currentProjectId}/export/image?page=${currentViewPage}&t=${Date.now()}" alt="最終成果"
+                <img ${apiImageAttributes(`${API_BASE}/projects/${currentProjectId}/export/image?page=${currentViewPage}&t=${Date.now()}`)} alt="最終成果"
                      class="max-w-full lg:max-w-4xl h-auto object-contain comic-shadow bg-white" style="display:block;">
                 <div style="position:absolute;inset:0;">${panelOverlaysHtml}</div>
             </div>

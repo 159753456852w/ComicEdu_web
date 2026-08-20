@@ -13,7 +13,7 @@ const API_BASE = `${API_ORIGIN}/api/v1`;
 
 async function apiFetch(input, init = {}) {
     const headers = new Headers(init.headers || {});
-    headers.set('X-Ngrok-Skip-Browser-Warning', 'true');
+    headers.set('ngrok-skip-browser-warning', 'true');
     return fetch(input, { ...init, headers, credentials: 'include' });
 }
 
